@@ -39,7 +39,7 @@ def say(msg=message_t, pauseWithPrompt=False, instant=False, linebreaks=1):
             time.sleep(msg.printPause)
             flush_input_buffer()
     if pauseWithPrompt:
-        promptPause()
+        prompt_pause()
         if linebreaks > 0:
             linebreak(msg.printPause)
     else:
@@ -49,5 +49,5 @@ def linebreak(times=1):
     for i in range(0, int(times + 1)):
         print()
 
-def promptPause():
+def prompt_pause():
     input("Press any key to continue >>")
