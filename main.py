@@ -1,5 +1,5 @@
-import textengine
-from textengine import message_t, slow_say
+import messaging
+from messaging import message_t, say
 from colorama import Fore, Back
 
-slow_say(message_t("Hello, World!"))
+say(message_t("Hello, World!"))
