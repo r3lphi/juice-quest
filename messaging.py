@@ -26,23 +26,32 @@ def flush_input_buffer():
     from termios import tcflush, TCIOFLUSH
     tcflush(sys.stdin, TCIOFLUSH)
 
-def say(msg=message_t, pauseWithPrompt=False, instant=False, linebreaks=1):
+def say(msg=message_t, pause=True, pauseWithPrompt=False, instant=False, linebreaks=1, reverse=False):
     if instant:
         clear()
         print(msg.color + msg.text)
     else:
-        out = ""
-        for c in msg.text:
-            out += c
-            clear()
-            print(msg.color + out)
-            time.sleep(msg.printPause)
-            flush_input_buffer()
+        if reverse:
+            out = msg.text
+            for i in range(len(msg.text) + 1):
+                clear()
+                print(msg.color + out)
+                out = out[:-1]
+                time.sleep(msg.printPause)
+                flush_input_buffer()
+        else:
+            out = ""
+            for c in msg.text:
+                out += c
+                clear()
+                print(msg.color + out)
+                time.sleep(msg.printPause)
+                flush_input_buffer()
     if pauseWithPrompt:
         prompt_pause()
         if linebreaks > 0:
             linebreak(msg.printPause)
-    else:
+    elif pause:
         input()
 
 def linebreak(times=1):
