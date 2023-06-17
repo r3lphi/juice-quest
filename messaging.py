@@ -58,11 +58,11 @@ def flush_input_buffer():
 #     elif pause:
 #         input()
 
-def say(msg=message_t, pause=True):
+def say(msg=message_t, pause=True, newLine=True):
     clear()
-    print(msg.color + msg.text)
+    print(msg.color + msg.text, end="\n" if newLine else "")
     if pause:
-        input()
+        prompt_pause()
     print(Style.RESET_ALL, end="")
 
 def give_choice(question=message_t, options=list[message_t]):
@@ -93,4 +93,4 @@ def linebreak(times=1):
         print()
 
 def prompt_pause():
-    input("Press any key to continue >>")
+    input(Fore.CYAN + "Press any key to continue >>" + Style.RESET_ALL)

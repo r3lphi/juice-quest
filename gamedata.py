@@ -1,8 +1,48 @@
 from dataclasses import dataclass, field
 from date import date_t
-from world import interactable_t
+from world import interactable_t, place_t, storage_t, InteractableTypes
+from messaging import message_t
 
 @dataclass
 class gamedata_t:
+    name: str="Mark"
     date: date_t=field(default_factory=date_t)
-    pockets: list[interactable_t]=None
+    place: place_t=None
+    placeHistory = []
+    storage = storage_t("Pockets", 1, 2)
+    world = [
+        place_t(
+            "Home",
+            "your house. It's got white and blue walls, and it's a little rundown. You think to yourself, 'It could definitely use some cleaning'.",
+            interactables=[
+                interactable_t("Playstation 4", InteractableTypes.OBJECT, [
+                    message_t("It's an original, launch-day edition."),
+                    message_t("You remember hearing about how cool the midnight release was at GameStop from your friends over a discord call."),
+                    message_t("You regret pre-ordering it on Amazon..")
+                ],
+                alwaysCapitalized=True,
+                storageLevelRequirement=2
+                ),
+                interactable_t("Wallet", InteractableTypes.OBJECT, [
+                    message_t("It's brown, and made with a choppy leather."),
+                    message_t("It's got a single $10 bill inside it, along with a few credit cards.")
+                ],
+                owner="somebody"
+                )
+            ]
+        ),
+        place_t(
+            "CP9",
+            "a white, raggidy looking house.",
+            interactables=[
+                interactable_t("Bob The Jokesperson", InteractableTypes.PERSON, [
+                    message_t("Hey there! Wanna hear a joke?"),
+                ],
+                    alwaysCapitalized=True
+                ),
+                interactable_t("Fridge", InteractableTypes.OBJECT, [
+                    message_t("It's a white fridge with a few family photos pegged to the front."),
+                ])
+            ]
+        )
+    ]
