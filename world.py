@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from messaging import message_t, say
-from parsing import parsing_generate_articled, vowels, parsing_ownerize
+from parsing import parsing_generate_articled, vowels, parsing_ownerize, parsing_rough_compare
 from enum import Enum
 
 InteractableTypes = Enum('InteractableTypes', ['PERSON', 'OBJECT'])
@@ -16,6 +16,7 @@ class interactable_t:
     canPickup: bool=True if type != InteractableTypes.PERSON else False
     storageLevelRequirement: int=1
     storageFreeSlotsRequirement: int=1
+    alternateNames: list[str]=None
     owner: str=None
 
 def interact(interactable=interactable_t, falseInteract=False):
@@ -36,7 +37,7 @@ def interact(interactable=interactable_t, falseInteract=False):
     for line in interactable.interactionLines:
         say(line)
 
-def interactables_compile(list):
+def interactables_compile(list, gamedata):
     if not list:
         return "nothing.."
 
@@ -48,7 +49,7 @@ def interactables_compile(list):
         
         if interactable.type != InteractableTypes.PERSON:
             if interactable.owner:
-                built += parsing_ownerize(interactable.owner) + " "
+                built += parsing_ownerize(interactable.owner, gamedata) + " "
             else:
                 if interactable.name[0] in vowels:
                     built + "an "
@@ -77,8 +78,28 @@ def place_load(place=place_t):
             say(line)
     return place
 
-def place_describe(place=place_t):
-    say(message_t("You look around " + place.qualities + " In it you see " + interactables_compile(place.interactables)))
+def place_describe(place=place_t, gamedata=None):
+    say(message_t("You look around " + place.qualities + " In it you see " + interactables_compile(place.interactables, gamedata)))
+
+def place_find_interactable(place=place_t, query=str, typemask=None):
+    suspect = None
+    for interactable in place.interactables:
+        if typemask:
+            if interactable.type not in typemask:
+                continue
+        
+        if interactable.name == query:
+            return interactable
+        
+        if interactable.alternateNames:
+            for alt in interactable.alternateNames:
+                if alt.lower() == query:
+                    return interactable
+
+        if parsing_rough_compare(interactable.name, query):
+            suspect = interactable
+    if suspect:
+        return suspect
 
 @dataclass
 class storage_t:
@@ -87,5 +108,5 @@ class storage_t:
     capacity: int
     contents = []
 
-def storage_print_contents(storage=storage_t):
-    say(message_t("You take a look into your " + storage.name.lower() + ". You find " + interactables_compile(storage.contents)))
+def storage_print_contents(storage=storage_t, gamedata=None):
+    say(message_t("You take a look into your " + storage.name.lower() + ". You find " + interactables_compile(storage.contents, gamedata)))

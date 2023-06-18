@@ -2,13 +2,11 @@ articles = ["the", "to", "a", "an"]
 vowels = ["a", "e", "i", "o", "u"]
 pronouns = ["i", "my", "you", "your", "he", "his", "she", "her", "they", "their"]
 
-def parsing_remove_list_articles(words):
-    newList = []
-    for word in words:
+def parsing_remove_articles(str):
+    for word in str.split():
         if word in articles:
-            continue
-        newList.append(word)
-    return newList
+            return parsing_remove_articles(str[:str.index(word)] + str[str.index(word) + len(word) + 1:])
+    return str
 
 def parsing_generate_articled(words, uppercaseWhitelist=[]):
     built = ""
@@ -31,8 +29,19 @@ def parsing_generate_articled(words, uppercaseWhitelist=[]):
         k += 1
     built += "."
     return built
-def parsing_ownerize(word):
+def parsing_ownerize(word, gamedata):
     if word in pronouns:
         return word
+    if word == gamedata.name:
+        return "your"
     return word + "'s"
+
+def parsing_rough_compare(a, b):
+    if not b:
+        return False
+    for word in b.lower().split():
+        if word in a.lower().split():
+            continue
+        return False
+    return True
 

@@ -21,13 +21,19 @@ class gamedata_t:
                     message_t("You regret pre-ordering it on Amazon..")
                 ],
                 alwaysCapitalized=True,
-                storageLevelRequirement=2
+                storageLevelRequirement=2,
+                alternateNames=["PS4"]
                 ),
                 interactable_t("Wallet", InteractableTypes.OBJECT, [
                     message_t("It's brown, and made with a choppy leather."),
                     message_t("It's got a single $10 bill inside it, along with a few credit cards.")
                 ],
-                owner="somebody"
+                owner=name
+                ),
+                interactable_t("4", InteractableTypes.OBJECT, [
+                    message_t("This is a 4")
+                ],
+                owner="Nobody"
                 )
             ]
         ),

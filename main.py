@@ -28,7 +28,7 @@ def intro():
     say(message_t(Fore.CYAN + "Introducing, " + Fore.YELLOW + "Juice Quest"))
     say(message_t(Fore.CYAN + "By Ralph El Massih"))
 
-intro()
+# intro()
 gameData.place = place_load(gameData.world[0])
 
 while(True):
