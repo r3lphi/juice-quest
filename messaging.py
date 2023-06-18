@@ -5,6 +5,9 @@ import sys
 import time
 import os
 import random
+import inflect
+
+infEngine = inflect.engine()
 
 class charcter_schemes_e:
     NARRATOR: str=Fore.BLUE
@@ -14,6 +17,8 @@ class message_t:
     text: str
     color: str=Style.RESET_ALL
     printPause: float=0.025
+    playerReward: object=None
+    placeReward: str=None
 
 def clear():
     if os.name == 'nt':
@@ -58,12 +63,31 @@ def flush_input_buffer():
 #     elif pause:
 #         input()
 
-def say(msg=message_t, pause=True, newLine=True):
+def say(msg=message_t, pause=True, newLine=True, gamedata: object=None):
     clear()
     print(msg.color + msg.text, end="\n" if newLine else "")
     if pause:
         prompt_pause()
     print(Style.RESET_ALL, end="")
+
+    if msg.playerReward:
+        from world import storage_t, storage_add, interactables_compile
+        from gamedata import gamedata_t
+        from parsing import parsing_get_article, parsing_generate_quantity
+
+        gamedata = gamedata_t
+
+        say(message_t(f"You were gifted {interactables_compile([msg.playerReward], gamedata)}", color=Fore.YELLOW))
+        storage_add(gamedata.storage, msg.playerReward)
+    if msg.placeReward:
+        from world import place_t
+        from gamedata import gamedata_t
+
+        gamedata = gamedata_t
+
+        for place in gamedata.world:
+            if place.name == msg.placeReward:
+                place.visible = True
 
 def give_choice(question=message_t, options=list[message_t]):
     clear()

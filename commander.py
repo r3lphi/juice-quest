@@ -1,8 +1,10 @@
 from dataclasses import dataclass
 from parsing import parsing_remove_articles, parsing_rough_compare
-from messaging import say, message_t, prompt_pause
+from messaging import say, message_t, prompt_pause, clear
 from gamedata import gamedata_t
-from world import place_describe, interact, storage_print_contents, place_load, InteractableTypes, place_find_interactable
+from colorama import Fore, Style
+from world import place_describe, interact, storage_print_contents, storage_calc_free_space, storage_find_interactable, place_load, InteractableTypes, place_find_interactable
+import copy
 
 @dataclass
 class command_t:
@@ -19,6 +21,23 @@ master_cmds = [
     command_t("go", ["to where"]),
     command_t("speak", ["person"])
 ]
+
+def tp_hub(gamedata=gamedata_t):
+    gamedata.place = None
+
+    while(not gamedata.place):
+        clear()
+
+        for place in gamedata.world:
+            if not place.visible:
+                continue
+
+            print(f": {place.name} :")
+
+        print()
+
+        response = input(Fore.GREEN + "Where would you like to go? " + Style.RESET_ALL)
+        command_run(f"go {response}", gamedata)
 
 def command_run(inputCmd, gamedata=gamedata_t):
     processed = parsing_remove_articles(inputCmd.lower())
@@ -68,7 +87,7 @@ def command_run(inputCmd, gamedata=gamedata_t):
             found = place_find_interactable(gamedata.place, keywordExcludedPhrase)
 
             if found:
-                interact(found, falseInteract=True if found.type == InteractableTypes.PERSON else False)
+                interact(found, falseInteract=True if found.type == InteractableTypes.PERSON else False, gamedata=gamedata)
                 return
             
             say(message_t("There's nothing like that to check."))
@@ -87,47 +106,76 @@ def command_run(inputCmd, gamedata=gamedata_t):
                         say(message_t(f"The {found.name} was too large to possibly fit into your {gamedata.storage.name.lower()}. Maybe if you had something bigger to put it in.."))
                         return
                     
-                    if gamedata.storage.capacity - len(gamedata.storage.contents) < found.storageFreeSlotsRequirement:
+                    if storage_calc_free_space(gamedata.storage) < found.storageFreeSlotsRequirement:
                         say(message_t(f"You don't have enough room in your {gamedata.storage.name.lower()} for the {sentenceFittedName}."))
                         return
                     say(message_t(f"You picked up the {sentenceFittedName}."))
 
-                    gamedata.storage.contents.append(found)
-                    gamedata.place.interactables.remove(found)
+                    if storage_find_interactable(gamedata.storage, found.name):
+                        storage_find_interactable(gamedata.storage, found.name).quantity += 1
+                    else:
+                        temp = copy.deepcopy(found)
+                        temp.quantity = 1
+
+                        gamedata.storage.contents.append(temp)
+                    
+                    found.quantity -= 1
+                    if found.quantity == 0:
+                        gamedata.place.interactables.remove(found)
 
                     return
             say(message_t(f"There's nothing like that to put in your {gamedata.storage.name.lower()}."))
         case "discard":
             if keywordExcludedPhrase == "all" or keywordExcludedPhrase == "everything":
+                if len(gamedata.storage.contents) == 0:
+                    say(message_t(f"You had nothing in your {gamedata.storage.name.lower()} to throw away.."))
+                    return
+
                 say(message_t(f"You threw everything out of your {gamedata.storage.name.lower()}."))
 
-                gamedata.place.interactables += gamedata.storage.contents
+                for i in gamedata.storage.contents:
+                    if place_find_interactable(gamedata.place, i.name):
+                        place_find_interactable(gamedata.place, i.name).quantity += i.quantity
+                    else:
+                        gamedata.place.interactables.append(i)
+
                 gamedata.storage.contents.clear()
 
                 return
 
-            found = place_find_interactable(gamedata.place, keywordExcludedPhrase)
+            found = storage_find_interactable(gamedata.storage, keywordExcludedPhrase)
 
             if found:
                     sentenceFittedName = (found.name if found.alwaysCapitalized else found.name.lower())
                     
                     say(message_t(f"You threw away the {sentenceFittedName}."))
 
-                    gamedata.place.interactables.append(found)
-                    gamedata.storage.contents.remove(found)
+                    if place_find_interactable(gamedata.place, found.name):
+                        place_find_interactable(gamedata.place, found.name).quantity += 1
+                    else:
+                        gamedata.place.interactables.append(found)
+                    
+                    found.quantity -= 1
+                    if found.quantity == 0:
+                        gamedata.storage.contents.remove(found)
 
                     return
             say(message_t(f"You don't have anything like that in your {gamedata.storage.name.lower()} to throw away.."))
         case "go":
+            if keywordExcludedPhrase == "outside":
+                say(message_t("You went outside."))
+                tp_hub()
+                return
+
             for place in gamedata.world:
-                if place.name.lower() == keywordExcludedPhrase:
+                if place.name.lower() == keywordExcludedPhrase and place.visible:
                     say(message_t(f"You went to {place.name}."))
                     gamedata.place = place_load(place)
         case "speak":
             found = place_find_interactable(gamedata.place, keywordExcludedPhrase, [InteractableTypes.PERSON])
 
             if found:
-                interact(found)
+                interact(found, gamedata=gamedata)
                 return
             
             say(message_t("There's nobody here called that to speak to."))

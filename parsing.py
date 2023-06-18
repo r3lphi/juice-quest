@@ -1,6 +1,10 @@
+import inflect
+
 articles = ["the", "to", "a", "an"]
 vowels = ["a", "e", "i", "o", "u"]
 pronouns = ["i", "my", "you", "your", "he", "his", "she", "her", "they", "their"]
+
+infEngine = inflect.engine()
 
 def parsing_remove_articles(str):
     for word in str.split():
@@ -29,12 +33,36 @@ def parsing_generate_articled(words, uppercaseWhitelist=[]):
         k += 1
     built += "."
     return built
+
+def parsing_get_article(word):
+    if word[0] in vowels:
+        return "an"
+    return "a"
+
 def parsing_ownerize(word, gamedata):
     if word in pronouns:
         return word
     if word == gamedata.name:
         return "your"
     return word + "'s"
+
+def parsing_generate_quantity(word, quantity):
+    if quantity == 1:
+        if word[0] in vowels:
+            return "an "
+        else:
+            return "a "
+    elif quantity <= 12:
+        match quantity:
+            case 6:
+                return "half-a-dozen "
+            case 12:
+                return "a dozen "
+            case _:
+                return f"{infEngine.number_to_words(quantity)} "
+    else:
+        return "a lot of "
+
 
 def parsing_rough_compare(a, b):
     if not b:
