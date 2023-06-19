@@ -6,11 +6,17 @@ import time
 import os
 import random
 import inflect
+import monstergame
 
 infEngine = inflect.engine()
 
 class charcter_schemes_e:
     NARRATOR: str=Fore.BLUE
+
+@dataclass
+class event_invoke_t:
+    func_name: str
+    func_object: object
 
 @dataclass
 class message_t:
@@ -19,6 +25,9 @@ class message_t:
     printPause: float=0.025
     playerReward: object=None
     placeReward: str=None
+    shallowPrompt: bool=False
+    showRewardMsg: bool=True
+    eventInvoke: event_invoke_t=None
 
 def clear():
     if os.name == 'nt':
@@ -66,10 +75,14 @@ def flush_input_buffer():
 def say(msg=message_t, pause=True, newLine=True, gamedata: object=None):
     clear()
     print(msg.color + msg.text, end="\n" if newLine else "")
-    if pause:
+    if pause and not msg.shallowPrompt:
         prompt_pause()
     print(Style.RESET_ALL, end="")
 
+    if msg.shallowPrompt:
+        response = input(f"{Fore.GREEN}Type your answer here: {Style.RESET_ALL}")
+        if not response:
+            say(msg, pause, newLine, gamedata)
     if msg.playerReward:
         from world import storage_t, storage_add, interactables_compile
         from gamedata import gamedata_t
@@ -77,17 +90,25 @@ def say(msg=message_t, pause=True, newLine=True, gamedata: object=None):
 
         gamedata = gamedata_t
 
-        say(message_t(f"You were gifted {interactables_compile([msg.playerReward], gamedata)}", color=Fore.YELLOW))
-        storage_add(gamedata.storage, msg.playerReward)
+        if msg.showRewardMsg:
+            say(message_t(f"You were gifted {interactables_compile([msg.playerReward], gamedata)}", color=Fore.YELLOW))
+
+        storage_add(gamedata.storage, msg.playerReward, msg.playerReward.quantity)
     if msg.placeReward:
         from world import place_t
         from gamedata import gamedata_t
-
         gamedata = gamedata_t
 
         for place in gamedata.world:
-            if place.name == msg.placeReward:
+            if place.nameFormal.lower() == msg.placeReward.lower():
                 place.visible = True
+        
+        say(message_t(f"Congrats, you've unlocked {place.nameConvo}!", color=Fore.YELLOW))
+    
+    if msg.eventInvoke:
+        found = getattr(msg.eventInvoke.func_object, msg.eventInvoke.func_name)
+        if found:
+            found()
 
 def give_choice(question=message_t, options=list[message_t]):
     clear()
@@ -117,4 +138,4 @@ def linebreak(times=1):
         print()
 
 def prompt_pause():
-    input(Fore.CYAN + "Press any key to continue >>" + Style.RESET_ALL)
+    input(f"{Fore.CYAN}Press any key to continue >>{Style.RESET_ALL}")

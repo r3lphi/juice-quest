@@ -2,8 +2,7 @@ import messaging
 from messaging import message_t, clear, say, give_choice, charcter_schemes_e
 from colorama import Fore, Back, Style
 from gamedata import gamedata_t
-from date import date_t, date_cycle, date_build, date_out
-from world import place_t, place_load, interactable_t, InteractableTypes
+from world import place_t, place_load, place_find, interactable_t, InteractableTypes
 from commander import *
 
 gameData = gamedata_t()
@@ -29,9 +28,9 @@ def intro():
     say(message_t(Fore.CYAN + "By Ralph El Massih"))
 
 intro()
-gameData.place = place_load(gameData.world[0])
+gameData.place = place_load(place_find("Home"))
 
 while(True):
     clear()
-    response = input(Fore.GREEN + "What would you like to do (type 'help' to see a list of commands)? " + Style.RESET_ALL)
+    response = input(Fore.GREEN + "What would you like to do? (type 'help' to see a list of commands) " + Style.RESET_ALL)
     command_run(response, gameData)

@@ -52,7 +52,7 @@ def parsing_generate_quantity(word, quantity):
             return "an "
         else:
             return "a "
-    elif quantity <= 12:
+    else:
         match quantity:
             case 6:
                 return "half-a-dozen "
@@ -60,9 +60,6 @@ def parsing_generate_quantity(word, quantity):
                 return "a dozen "
             case _:
                 return f"{infEngine.number_to_words(quantity)} "
-    else:
-        return "a lot of "
-
 
 def parsing_rough_compare(a, b):
     if not b:

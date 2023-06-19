@@ -3,7 +3,7 @@ from parsing import parsing_remove_articles, parsing_rough_compare
 from messaging import say, message_t, prompt_pause, clear
 from gamedata import gamedata_t
 from colorama import Fore, Style
-from world import place_describe, interact, storage_print_contents, storage_calc_free_space, storage_find_interactable, place_load, InteractableTypes, place_find_interactable
+from world import place_describe, interact, storage_print_contents, storage_find_interactable, place_load, InteractableTypes, place_find_interactable, place_find, storage_remove
 import copy
 
 @dataclass
@@ -18,26 +18,46 @@ master_cmds = [
     command_t("check", ["thing"]),
     command_t("pickup", ["thing"]),
     command_t("discard", ["thing in your inventory"]),
-    command_t("go", ["to where"]),
-    command_t("speak", ["person"])
+    command_t("go"),
+    command_t("speak", ["person"]),
+    command_t("give", ["person", "thing"])
 ]
 
 def tp_hub(gamedata=gamedata_t):
-    gamedata.place = None
+    tpd = False
 
-    while(not gamedata.place):
+    available = []
+
+    for placename in gamedata.place.paths:
+        place = place_find(placename, gamedata)
+
+        if not place:
+            continue
+        if not place.unlocked:
+            continue
+
+        available.append(place)
+
+    while(not tpd):
         clear()
 
-        for place in gamedata.world:
-            if not place.visible:
-                continue
-
-            print(f": {place.name} :")
+        for place in available:
+            print(f": {place.nameFormal} :")
 
         print()
 
-        response = input(Fore.GREEN + "Where would you like to go? " + Style.RESET_ALL)
-        command_run(f"go {response}", gamedata)
+        response = input(Fore.GREEN + "Where would you like to go? (type 'cancel' to stay where you are) " + Style.RESET_ALL)
+
+        if response == "cancel":
+            tpd = True
+            return
+        
+        for place in available:
+            if place.nameFormal.lower() == response.lower():
+                say(message_t(f"You went to {place.nameConvo}."))
+                gamedata.place = place_load(place)
+
+                tpd = True
 
 def command_run(inputCmd, gamedata=gamedata_t):
     processed = parsing_remove_articles(inputCmd.lower())
@@ -55,7 +75,7 @@ def command_run(inputCmd, gamedata=gamedata_t):
         return
 
     if matchedCmd.parameters:
-        if len(processed) - 1 < len(matchedCmd.parameters):
+        if len(processed.split()) - 1 < len(matchedCmd.parameters):
             return
     
     keywordExcludedPhrase = processed[len(matchedCmd.keyword) + 1:].lower()
@@ -99,16 +119,13 @@ def command_run(inputCmd, gamedata=gamedata_t):
                     sentenceFittedName = (found.name if found.alwaysCapitalized else found.name.lower())
                     
                     if not found.canPickup:
-                        say("You can't carry that around with you!")
+                        say(message_t("You can't carry that around with you!"))
                         return
                     
                     if gamedata.storage.level < found.storageLevelRequirement:
                         say(message_t(f"The {found.name} was too large to possibly fit into your {gamedata.storage.name.lower()}. Maybe if you had something bigger to put it in.."))
                         return
                     
-                    if storage_calc_free_space(gamedata.storage) < found.storageFreeSlotsRequirement:
-                        say(message_t(f"You don't have enough room in your {gamedata.storage.name.lower()} for the {sentenceFittedName}."))
-                        return
                     say(message_t(f"You picked up the {sentenceFittedName}."))
 
                     if storage_find_interactable(gamedata.storage, found.name):
@@ -162,15 +179,7 @@ def command_run(inputCmd, gamedata=gamedata_t):
                     return
             say(message_t(f"You don't have anything like that in your {gamedata.storage.name.lower()} to throw away.."))
         case "go":
-            if keywordExcludedPhrase == "outside":
-                say(message_t("You went outside."))
-                tp_hub()
-                return
-
-            for place in gamedata.world:
-                if place.name.lower() == keywordExcludedPhrase and place.visible:
-                    say(message_t(f"You went to {place.name}."))
-                    gamedata.place = place_load(place)
+            tp_hub(gamedata)
         case "speak":
             found = place_find_interactable(gamedata.place, keywordExcludedPhrase, [InteractableTypes.PERSON])
 
@@ -179,3 +188,39 @@ def command_run(inputCmd, gamedata=gamedata_t):
                 return
             
             say(message_t("There's nobody here called that to speak to."))
+        case "give":
+            person = None
+            personPhraseMatched = None
+
+            for word in keywordExcludedPhrase.split():
+                person = place_find_interactable(gamedata.place, keywordExcludedPhrase[:keywordExcludedPhrase.index(word) + len(word)], [InteractableTypes.PERSON])
+                if person:
+                    personPhraseMatched = keywordExcludedPhrase[:keywordExcludedPhrase.index(word) + len(word)]
+                    break
+            
+            # say(message_t(f"{keywordExcludedPhrase} vs. {personPhraseMatched}"))
+            
+            if not person:
+                return
+
+            gift = None
+
+            if keywordExcludedPhrase.index(personPhraseMatched) > -1:
+                gift = storage_find_interactable(gamedata.storage, keywordExcludedPhrase[keywordExcludedPhrase.index(personPhraseMatched) + len(personPhraseMatched) + 1:])
+                # say(message_t(f"Full search: {keywordExcludedPhrase[keywordExcludedPhrase.index(personPhraseMatched) + len(personPhraseMatched) + 1:]}"))
+            if not gift:
+                for word in keywordExcludedPhrase.split():
+                    if keywordExcludedPhrase.index(word):
+                        gift = storage_find_interactable(gamedata.storage, keywordExcludedPhrase[keywordExcludedPhrase.index(word) + len(word) + 1:])
+                        # say(message_t(f"Frag search: {keywordExcludedPhrase[keywordExcludedPhrase.index(word) + len(word) + 1:]}"))
+                        if gift:
+                            break
+
+            if not gift:
+                return
+            
+            if person.itemReactionLines.get(gift.name):
+                for line in person.itemReactionLines[gift.name]:
+                    say(line)
+                if person.takeItemsOnReaction:
+                    storage_remove(gamedata.storage, gift)
