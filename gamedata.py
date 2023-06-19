@@ -2,7 +2,15 @@ from dataclasses import dataclass, field
 from world import interactable_t, place_t, storage_t, InteractableTypes
 from messaging import message_t, event_invoke_t, say, clear
 import gamedata
+import random
+from random import choice
 from colorama import Fore, Style
+
+library_texts=[
+    "There was once a wise money named curious george. He slipped on a banana and died, the end.",
+    "Urusei Yatsura is a cult classic written by Rumiko Takahashi in the early 80s.",
+    "This book will be an in-depth analysis on why Zelda II on the NES is one of the best games in the franchise-"
+]
 
 @dataclass
 class gamedata_t:
@@ -128,7 +136,11 @@ class gamedata_t:
                     message_t("HERE, TAKE THIS.", playerReward=interactable_t("Pen and Paper", InteractableTypes.OBJECT))
                 ],
                 alwaysCapitalized=True
-                )
+                ),
+                interactable_t("Shelf of Books", InteractableTypes.OBJECT, [
+                    message_t(f"{Fore.LIGHTBLACK_EX}You pick out a book at random from the shelf and begin reading.."),
+                    message_t(random.choice(library_texts))
+                ])
             ],
             paths=[
                 "Streets"
